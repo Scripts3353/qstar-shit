@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MY shit</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0e0e0e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      background: #1a1a1a;
+      border: 1px solid #2e2e2e;
+      border-radius: 6px;
+      color: #f0f0f0;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.875rem;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+
+    .btn-url {
+      color: #666;
+      font-size: 0.7rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+      margin-left: 1rem;
+    }
+
+    .arrow {
+      color: #666;
+      font-size: 0.75rem;
+      margin-left: 0.75rem;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="buttons" id="buttons"></div>
+
+  <script>
+    const links = [
+      { label: 'Roblox Username Checker', url: 'https://qstars-username-sniper.netlify.app/' },
+      { label: 'YouTube', url: 'https://youtube.com' },
+      { label: 'GitHub', url: 'https://github.com' },
+    ];
+
+    const container = document.getElementById('buttons');
+
+    links.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.innerHTML = `
+        <span>${item.label}</span>
+        <span class="btn-url">${item.url}</span>
+        <span class="arrow">→</span>
+      `;
+      btn.addEventListener('click', () => window.location.href = item.url);
+      container.appendChild(btn);
+    });
+  </script>
+</body>
+</html>
