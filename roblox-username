@@ -1,0 +1,174 @@
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:monospace;font-size:13px;color:#e0e0e0;padding:16px;background:#000}
+label{display:block;font-size:11px;color:#888;margin-bottom:4px}
+input[type=number],input[type=text]{width:100%;padding:6px 8px;font-family:monospace;font-size:13px;border:1px solid #333;border-radius:4px;background:#000;color:#e0e0e0;outline:none}
+input:focus{border-color:#e0e0e0}
+input:disabled{opacity:0.4}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.field{flex:1;min-width:100px}
+.btns{display:flex;gap:8px;align-items:flex-end}
+button{padding:6px 16px;font-family:monospace;font-size:13px;border:1px solid #444;background:#000;color:#e0e0e0;cursor:pointer;border-radius:4px}
+button:hover:not(:disabled){background:#111}
+button:disabled{opacity:0.4;cursor:not-allowed}
+.webhook-row{margin-bottom:12px}
+.checkbox-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px;color:#aaa}
+#log{border:1px solid #222;padding:10px;height:320px;overflow-y:auto;font-family:monospace;font-size:12px;background:#000;border-radius:4px;margin-bottom:8px}
+.line{padding:2px 0;border-bottom:1px solid #111}
+.line:last-child{border-bottom:none}
+.i{color:#888}
+.s{color:#7fff7f}
+.t{color:#ff7f7f}
+.e{color:#ffbf00}
+.statusbar{display:flex;justify-content:space-between;font-size:11px;color:#666;padding:4px 0}
+.dl-btn{width:100%;padding:7px;font-family:monospace;font-size:13px;border:1px solid #444;background:#000;color:#e0e0e0;cursor:pointer;border-radius:4px;margin-top:8px}
+.dl-btn:hover{background:#111}
+.note{font-size:11px;color:#555;margin-top:8px}
+.note a{color:#aaa}
+</style>
+
+<div class="row">
+  <div class="field"><label>LENGTH</label><input type="number" id="length" min="3" max="20" value="5"></div>
+  <div class="field"><label>TARGET COUNT</label><input type="number" id="count" min="1" max="100" value="10"></div>
+  <div class="field"><label>DELAY (s)</label><input type="number" id="delay" min="0.1" max="2" value="0.5" step="0.1"></div>
+  <div class="btns">
+    <div><label>&nbsp;</label><button id="startBtn">Start</button></div>
+    <div><label>&nbsp;</label><button id="stopBtn" disabled>Stop</button></div>
+  </div>
+</div>
+
+<div class="webhook-row">
+  <div class="checkbox-row">
+    <input type="checkbox" id="webhookToggle">
+    <label for="webhookToggle">Discord webhook</label>
+  </div>
+  <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/..." disabled>
+</div>
+
+<div id="log">
+</div>
+
+<div class="statusbar">
+  <span id="stats">found: 0 / 0</span>
+</div>
+
+<div class="note">CORS proxy required: <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank">click here to get the thing working</a>, then refresh.</div>
+
+<script>
+const CORS='https://cors-anywhere.herokuapp.com/';
+const API='https://auth.roblox.com/v1/usernames/validate';
+const BD='1999-04-20';
+let running=false,stop=false,valid=[];
+
+const log=document.getElementById('log');
+const startBtn=document.getElementById('startBtn');
+const stopBtn=document.getElementById('stopBtn');
+const statusText=document.getElementById('statusText');
+const stats=document.getElementById('stats');
+const wt=document.getElementById('webhookToggle');
+const wu=document.getElementById('webhookUrl');
+
+wt.onchange=()=>{wu.disabled=!wt.checked;if(!wt.checked)wu.value='';};
+
+function addLog(msg,type){
+  const d=document.createElement('div');
+  d.className='line '+type;
+  const s=document.createElement('span');
+  s.textContent=msg;
+  d.appendChild(s);
+  log.appendChild(d);
+  d.scrollIntoView({block:'nearest'});
+}
+
+function makeU(len){
+  const c='abcdefghijklmnopqrstuvwxyz0123456789';
+  let r='';for(let i=0;i<len;i++)r+=c[Math.floor(Math.random()*c.length)];return r;
+}
+
+async function checkU(u){
+  const url=CORS+API+'?request.username='+encodeURIComponent(u)+'&request.birthday='+BD;
+  try{
+    const r=await fetch(url,{signal:AbortSignal.timeout(10000),headers:{'Origin':location.origin}});
+    if(!r.ok){if(r.status===403)addLog('CORS proxy blocked. Activate it first.','e');return false;}
+    const d=await r.json();return d.code===0;
+  }catch(e){
+    if(e.name==='TimeoutError')addLog('timeout: '+u,'e');
+    else addLog('error: '+e.message,'e');
+    return false;
+  }
+}
+
+async function sendHook(url,u){
+  try{
+    await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'available: `'+u+'`',username:'checker'})});
+  }catch(e){addLog('webhook failed: '+e.message,'e');}
+}
+
+function downloadValid(){
+  if(!valid.length){addLog('nothing to save','e');return;}
+  const b=new Blob([valid.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download='valid_usernames.txt';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  addLog('saved '+valid.length+' usernames','s');
+}
+
+async function startSnipe(){
+  const len=parseInt(document.getElementById('length').value);
+  const target=parseInt(document.getElementById('count').value);
+  const delay=parseFloat(document.getElementById('delay').value);
+  const useHook=wt.checked;
+  const hook=wu.value.trim();
+
+  if(len<3||len>20){addLog('length must be 3-20','e');return;}
+  if(target<1||target>100){addLog('count must be 1-100','e');return;}
+  if(useHook&&!hook){addLog('webhook url required','e');return;}
+
+  running=true;stop=false;valid=[];
+  startBtn.disabled=true;stopBtn.disabled=false;
+  statusText.textContent='running';
+  log.innerHTML='';
+  addLog('looking for '+target+' username(s) of length '+len,'i');
+  addLog('---','i');
+
+  let found=0,checked=0;
+
+  while(running&&found<target&&!stop){
+    checked++;
+    const u=makeU(len);
+    addLog('checking '+u+'...','i');
+    const avail=await checkU(u);
+    if(avail){
+      found++;valid.push(u);
+      addLog('['+found+'/'+target+'] '+u+' -- available','s');
+      if(useHook&&hook)await sendHook(hook,u);
+    }else{
+      addLog(u+' -- taken','t');
+    }
+    stats.textContent='found: '+found+' / '+target;
+    if(running&&found<target&&!stop)await new Promise(r=>setTimeout(r,delay*1000));
+  }
+
+  if(!stop){
+    addLog('---','i');
+    addLog('done. found '+found+' in '+checked+' checks','s');
+  }
+
+  if(valid.length>0){
+    const b=document.createElement('button');
+    b.className='dl-btn';b.textContent='download valid usernames';
+    b.onclick=downloadValid;log.appendChild(b);
+    b.scrollIntoView({block:'nearest'});
+  }
+
+  statusText.textContent='idle';
+  startBtn.disabled=false;stopBtn.disabled=true;running=false;
+}
+
+function stopSnipe(){if(running){stop=true;running=false;addLog('stopping...','e');statusText.textContent='stopping';}}
+
+startBtn.onclick=startSnipe;
+stopBtn.onclick=stopSnipe;
+</script>
